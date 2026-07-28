@@ -25,6 +25,15 @@ model Task {
   screenshots Screenshot[]
   comments    Comment[]
   tags        Tag[]
+  timeEntries TimeEntry[]
+}
+
+model TimeEntry {
+  id        String    @id @default(cuid())
+  startedAt DateTime  @default(now())
+  stoppedAt DateTime?
+  taskId    String
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
 model Tag {

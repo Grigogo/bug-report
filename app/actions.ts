@@ -57,7 +57,18 @@ export async function moveTask(id: string, to: TaskStatus) {
     (task.status === "IN_PROGRESS" && to === "REVIEW") ||
     (task.status === "REVIEW" && to === "DONE");
 
+  // Задача уходит из «В работе» — останавливаем её таймер
+  const stopTimers = task.status === "IN_PROGRESS";
+
   await prisma.$transaction([
+    ...(stopTimers
+      ? [
+          prisma.timeEntry.updateMany({
+            where: { taskId: id, stoppedAt: null },
+            data: { stoppedAt: new Date() },
+          }),
+        ]
+      : []),
     prisma.task.update({
       where: { id },
       data: {
@@ -77,6 +88,38 @@ export async function moveTask(id: string, to: TaskStatus) {
 
   for (const s of STATUSES) revalidatePath(STATUS_META[s].path);
   revalidatePath(`/tasks/${id}`);
+}
+
+export async function startTimer(taskId: string) {
+  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  if (!task) throw new Error("Задача не найдена");
+  if (task.status !== "IN_PROGRESS") {
+    throw new Error("Трекер времени доступен только для задач в статусе «В работе»");
+  }
+
+  await prisma.$transaction([
+    // Один активный таймер на всё приложение: запуск нового останавливает прежний
+    prisma.timeEntry.updateMany({
+      where: { stoppedAt: null },
+      data: { stoppedAt: new Date() },
+    }),
+    prisma.timeEntry.create({ data: { taskId } }),
+  ]);
+
+  revalidatePath(STATUS_META.IN_PROGRESS.path);
+  revalidatePath(`/tasks/${taskId}`);
+  revalidatePath("/reports");
+}
+
+export async function stopTimer(taskId: string) {
+  await prisma.timeEntry.updateMany({
+    where: { taskId, stoppedAt: null },
+    data: { stoppedAt: new Date() },
+  });
+
+  revalidatePath(STATUS_META.IN_PROGRESS.path);
+  revalidatePath(`/tasks/${taskId}`);
+  revalidatePath("/reports");
 }
 
 export async function createTag(formData: FormData) {

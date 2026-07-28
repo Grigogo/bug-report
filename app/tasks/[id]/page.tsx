@@ -5,6 +5,9 @@ import { moveTask, setTaskTags } from "@/app/actions";
 import { Comments } from "@/components/Comments";
 import { DeleteButton } from "@/components/DeleteButton";
 import { TagChip } from "@/components/TagChip";
+import { TimerControls } from "@/components/TimerControls";
+import { TimerTicker } from "@/components/TimerTicker";
+import { runningSince, totalSeconds } from "@/lib/time";
 import { ScreenshotGallery } from "@/components/ScreenshotGallery";
 import { formatDate } from "@/lib/format";
 import { STATUS_BADGE_LABEL, STATUS_META, TRANSITIONS } from "@/lib/status";
@@ -24,6 +27,7 @@ export default async function TaskPage({
         screenshots: true,
         comments: { orderBy: { createdAt: "asc" } },
         tags: true,
+        timeEntries: true,
       },
     }),
     prisma.tag.findMany({ orderBy: { name: "asc" } }),
@@ -87,6 +91,27 @@ export default async function TaskPage({
                 </button>
               </form>
             </details>
+          </div>
+        )}
+
+        {(task.status === "IN_PROGRESS" || task.timeEntries.length > 0) && (
+          <div className="mt-4 flex items-center gap-3 rounded-md bg-zinc-50 px-4 py-3 dark:bg-zinc-800/50">
+            <span className="text-sm text-zinc-500">Затрачено:</span>
+            <span className="text-sm">
+              <TimerTicker
+                baseSeconds={totalSeconds(
+                  task.timeEntries.filter((e) => e.stoppedAt !== null),
+                )}
+                runningSince={runningSince(task.timeEntries)?.toISOString() ?? null}
+              />
+            </span>
+            {task.status === "IN_PROGRESS" && (
+              <TimerControls
+                taskId={task.id}
+                isRunning={runningSince(task.timeEntries) !== null}
+                compact
+              />
+            )}
           </div>
         )}
 

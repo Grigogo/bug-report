@@ -23,6 +23,7 @@ export async function TaskListPage({
         _count: { select: { screenshots: true } },
         comments: { select: { isNew: true } },
         tags: true,
+        timeEntries: { select: { startedAt: true, stoppedAt: true } },
       },
     }),
     prisma.tag.findMany({ orderBy: { name: "asc" } }),

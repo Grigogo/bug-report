@@ -21,6 +21,13 @@ export default function RootLayout({
             <NavTabs />
             <div className="flex items-center gap-2">
               <Link
+                href="/reports"
+                className="rounded-md px-2 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                title="Отчёт по времени"
+              >
+                📊
+              </Link>
+              <Link
                 href="/tags"
                 className="rounded-md px-2 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                 title="Управление тегами"

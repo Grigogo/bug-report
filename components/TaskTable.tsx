@@ -1,14 +1,18 @@
 import Link from "next/link";
-import type { Tag, Task, TaskStatus } from "@prisma/client";
+import type { Tag, Task, TaskStatus, TimeEntry } from "@prisma/client";
 import { moveTask } from "@/app/actions";
 import { TagChip } from "@/components/TagChip";
+import { TimerControls } from "@/components/TimerControls";
+import { TimerTicker } from "@/components/TimerTicker";
 import { formatDate } from "@/lib/format";
 import { STATUS_META, TRANSITIONS } from "@/lib/status";
+import { runningSince, totalSeconds } from "@/lib/time";
 
 type TaskWithCount = Task & {
   _count: { screenshots: number };
   comments: { isNew: boolean }[];
   tags: Tag[];
+  timeEntries: Pick<TimeEntry, "startedAt" | "stoppedAt">[];
 };
 
 const primaryBtnCls =
@@ -42,6 +46,9 @@ export function TaskTable({
               <th className="px-4 py-3 font-medium">Завершена</th>
             )}
             <th className="px-4 py-3 font-medium">Скрины / 💬</th>
+            {(status === "IN_PROGRESS" || status === "DONE") && (
+              <th className="px-4 py-3 font-medium">Время</th>
+            )}
             <th className="px-4 py-3 font-medium text-right">Действие</th>
           </tr>
         </thead>
@@ -87,6 +94,27 @@ export function TaskTable({
                   ))}
                 {task._count.screenshots === 0 && task.comments.length === 0 && "—"}
               </td>
+              {(status === "IN_PROGRESS" || status === "DONE") && (
+                <td className="whitespace-nowrap px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <TimerTicker
+                      baseSeconds={totalSeconds(
+                        task.timeEntries.filter((e) => e.stoppedAt !== null),
+                      )}
+                      runningSince={
+                        runningSince(task.timeEntries)?.toISOString() ?? null
+                      }
+                    />
+                    {status === "IN_PROGRESS" && (
+                      <TimerControls
+                        taskId={task.id}
+                        isRunning={runningSince(task.timeEntries) !== null}
+                        compact
+                      />
+                    )}
+                  </div>
+                </td>
+              )}
               <td className="px-4 py-3">
                 <div className="flex justify-end gap-2">
                   {TRANSITIONS[task.status].map((t) => (
