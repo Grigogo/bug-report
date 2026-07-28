@@ -3,6 +3,9 @@
 import { useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
 import { createTask } from "@/app/actions";
+import { tagColor } from "@/lib/tags";
+
+export type TagOption = { id: string; name: string; color: string };
 
 async function uploadScreenshot(file: File): Promise<string> {
   try {
@@ -25,11 +28,18 @@ async function uploadScreenshot(file: File): Promise<string> {
 const inputCls =
   "w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-900";
 
-export function NewTaskForm() {
+export function NewTaskForm({ tags }: { tags: TagOption[] }) {
   const [files, setFiles] = useState<File[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function toggleTag(id: string) {
+    setSelectedTags((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
+    );
+  }
 
   function addFiles(list: FileList | null) {
     if (!list) return;
@@ -59,7 +69,13 @@ export function NewTaskForm() {
         screenshotUrls.push(await uploadScreenshot(file));
       }
 
-      await createTask({ title, description, steps, screenshotUrls });
+      await createTask({
+        title,
+        description,
+        steps,
+        screenshotUrls,
+        tagIds: selectedTags,
+      });
       // createTask делает redirect('/'), сюда управление обычно не возвращается
     } catch (err) {
       // redirect в server action пробрасывается как специальная ошибка — не показываем её
@@ -117,6 +133,31 @@ export function NewTaskForm() {
           className={inputCls}
         />
       </div>
+
+      {tags.length > 0 && (
+        <div className="space-y-1.5">
+          <span className="block text-sm font-medium">Проект / теги</span>
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag) => {
+              const selected = selectedTags.includes(tag.id);
+              return (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() => toggleTag(tag.id)}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition ${
+                    tagColor(tag.color).chip
+                  } ${selected ? "ring-2 ring-current" : "opacity-60 hover:opacity-100"}`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${tagColor(tag.color).dot}`} />
+                  {tag.name}
+                  {selected && " ✓"}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <label className="block text-sm font-medium">

@@ -24,6 +24,14 @@ model Task {
   completedAt DateTime?
   screenshots Screenshot[]
   comments    Comment[]
+  tags        Tag[]
+}
+
+model Tag {
+  id    String @id @default(cuid())
+  name  String @unique
+  color String @default("zinc")
+  tasks Task[]
 }
 
 model Comment {

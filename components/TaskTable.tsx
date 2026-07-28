@@ -1,12 +1,14 @@
 import Link from "next/link";
-import type { Task, TaskStatus } from "@prisma/client";
+import type { Tag, Task, TaskStatus } from "@prisma/client";
 import { moveTask } from "@/app/actions";
+import { TagChip } from "@/components/TagChip";
 import { formatDate } from "@/lib/format";
 import { STATUS_META, TRANSITIONS } from "@/lib/status";
 
 type TaskWithCount = Task & {
   _count: { screenshots: number };
   comments: { isNew: boolean }[];
+  tags: Tag[];
 };
 
 const primaryBtnCls =
@@ -50,12 +52,17 @@ export function TaskTable({
               className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50 dark:border-zinc-800/50 dark:hover:bg-zinc-800/50"
             >
               <td className="px-4 py-3">
-                <Link
-                  href={`/tasks/${task.id}`}
-                  className="font-medium text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  {task.title}
-                </Link>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href={`/tasks/${task.id}`}
+                    className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    {task.title}
+                  </Link>
+                  {task.tags.map((tag) => (
+                    <TagChip key={tag.id} tag={tag} small />
+                  ))}
+                </div>
                 <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500 dark:text-zinc-400">
                   {task.description}
                 </p>

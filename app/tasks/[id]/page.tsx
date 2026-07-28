@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { moveTask } from "@/app/actions";
+import { moveTask, setTaskTags } from "@/app/actions";
 import { Comments } from "@/components/Comments";
 import { DeleteButton } from "@/components/DeleteButton";
+import { TagChip } from "@/components/TagChip";
 import { ScreenshotGallery } from "@/components/ScreenshotGallery";
 import { formatDate } from "@/lib/format";
 import { STATUS_BADGE_LABEL, STATUS_META, TRANSITIONS } from "@/lib/status";
@@ -16,13 +17,17 @@ export default async function TaskPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const task = await prisma.task.findUnique({
-    where: { id },
-    include: {
-      screenshots: true,
-      comments: { orderBy: { createdAt: "asc" } },
-    },
-  });
+  const [task, allTags] = await Promise.all([
+    prisma.task.findUnique({
+      where: { id },
+      include: {
+        screenshots: true,
+        comments: { orderBy: { createdAt: "asc" } },
+        tags: true,
+      },
+    }),
+    prisma.tag.findMany({ orderBy: { name: "asc" } }),
+  ]);
 
   if (!task) notFound();
 
@@ -49,6 +54,41 @@ export default async function TaskPage({
           Создана {formatDate(task.createdAt)}
           {task.completedAt && ` · завершена ${formatDate(task.completedAt)}`}
         </p>
+
+        {allTags.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {task.tags.map((tag) => (
+              <TagChip key={tag.id} tag={tag} />
+            ))}
+            <details className="relative">
+              <summary className="cursor-pointer list-none text-xs text-zinc-500 hover:text-zinc-900 hover:underline dark:hover:text-zinc-100">
+                {task.tags.length > 0 ? "изменить теги" : "+ добавить теги"}
+              </summary>
+              <form
+                action={setTaskTags.bind(null, task.id)}
+                className="absolute left-0 top-6 z-10 w-56 space-y-2 rounded-md border border-zinc-200 bg-white p-3 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+              >
+                {allTags.map((tag) => (
+                  <label key={tag.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      name="tags"
+                      value={tag.id}
+                      defaultChecked={task.tags.some((t) => t.id === tag.id)}
+                    />
+                    <TagChip tag={tag} />
+                  </label>
+                ))}
+                <button
+                  type="submit"
+                  className="w-full rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
+                >
+                  Сохранить
+                </button>
+              </form>
+            </details>
+          </div>
+        )}
 
         <section className="mt-5 space-y-1">
           <h2 className="text-sm font-medium text-zinc-500">Описание</h2>

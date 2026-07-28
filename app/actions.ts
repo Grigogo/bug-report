@@ -12,6 +12,7 @@ export type CreateTaskInput = {
   description: string;
   steps?: string;
   screenshotUrls: string[];
+  tagIds?: string[];
 };
 
 export async function createTask(input: CreateTaskInput) {
@@ -28,6 +29,9 @@ export async function createTask(input: CreateTaskInput) {
       steps: input.steps?.trim() || null,
       screenshots: {
         create: input.screenshotUrls.map((url) => ({ url })),
+      },
+      tags: {
+        connect: (input.tagIds ?? []).map((id) => ({ id })),
       },
     },
   });
@@ -73,6 +77,39 @@ export async function moveTask(id: string, to: TaskStatus) {
 
   for (const s of STATUSES) revalidatePath(STATUS_META[s].path);
   revalidatePath(`/tasks/${id}`);
+}
+
+export async function createTag(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  const color = String(formData.get("color") ?? "zinc");
+  if (!name) return;
+
+  await prisma.tag.upsert({
+    where: { name },
+    update: { color },
+    create: { name, color },
+  });
+
+  revalidatePath("/tags");
+  for (const s of STATUSES) revalidatePath(STATUS_META[s].path);
+}
+
+export async function deleteTag(id: string) {
+  await prisma.tag.delete({ where: { id } });
+  revalidatePath("/tags");
+  for (const s of STATUSES) revalidatePath(STATUS_META[s].path);
+}
+
+export async function setTaskTags(taskId: string, formData: FormData) {
+  const tagIds = formData.getAll("tags").map(String);
+
+  await prisma.task.update({
+    where: { id: taskId },
+    data: { tags: { set: tagIds.map((id) => ({ id })) } },
+  });
+
+  for (const s of STATUSES) revalidatePath(STATUS_META[s].path);
+  revalidatePath(`/tasks/${taskId}`);
 }
 
 export async function addComment(taskId: string, formData: FormData) {
