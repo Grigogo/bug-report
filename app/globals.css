@@ -11,3 +11,20 @@ body {
     display: none !important;
   }
 }
+
+/* Все кликабельные элементы — с курсором-указателем */
+button:not(:disabled),
+[role="button"],
+summary,
+select,
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"],
+label:has(> input[type="checkbox"]),
+label:has(> input[type="radio"]) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
