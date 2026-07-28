@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { TaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { ReportFilters } from "@/components/ReportFilters";
 import { TagChip } from "@/components/TagChip";
 import { formatDate } from "@/lib/format";
 import { STATUSES, STATUS_BADGE_LABEL, STATUS_META } from "@/lib/status";
@@ -14,12 +15,15 @@ export default async function ReportsPage({
   searchParams: Promise<{ status?: string | string[]; tag?: string }>;
 }) {
   const params = await searchParams;
+  const explicit = params.status !== undefined;
   const rawStatuses = Array.isArray(params.status)
     ? params.status
     : params.status
       ? [params.status]
-      : ["IN_PROGRESS", "DONE"];
-  const selected = STATUSES.filter((s) => rawStatuses.includes(s));
+      : [];
+  const selected = explicit
+    ? STATUSES.filter((s) => rawStatuses.includes(s))
+    : (["IN_PROGRESS", "DONE"] as TaskStatus[]);
   const tagId = params.tag || undefined;
 
   const [tasks, tags] = await Promise.all([
@@ -51,52 +55,30 @@ export default async function ReportsPage({
     <div className="space-y-5">
       <h1 className="text-xl font-semibold">Отчёт по времени</h1>
 
-      <form
-        method="GET"
-        className="flex flex-wrap items-end gap-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
-      >
-        <fieldset className="space-y-1.5">
-          <legend className="text-xs font-medium text-zinc-500">Статусы</legend>
-          <div className="flex flex-wrap gap-3">
-            {STATUSES.map((s) => (
-              <label key={s} className="flex items-center gap-1.5 text-sm">
-                <input
-                  type="checkbox"
-                  name="status"
-                  value={s}
-                  defaultChecked={selected.includes(s)}
-                />
-                {STATUS_META[s].label}
-              </label>
-            ))}
-          </div>
-        </fieldset>
+      <ReportFilters
+        tags={tags.map((t) => ({ id: t.id, name: t.name }))}
+        selectedStatuses={selected}
+        selectedTag={tagId ?? ""}
+      />
 
-        <label className="space-y-1.5 text-xs font-medium text-zinc-500">
-          Проект (тег)
-          <select
-            name="tag"
-            defaultValue={tagId ?? ""}
-            className="block rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-normal text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-          >
-            <option value="">Все проекты</option>
-            {tags.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="flex flex-wrap gap-3">
+        <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+          <p className="text-xs text-zinc-500">Задач</p>
+          <p className="text-lg font-semibold tabular-nums">{rows.length}</p>
+        </div>
+        <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+          <p className="text-xs text-zinc-500">Всего времени</p>
+          <p className="text-lg font-semibold tabular-nums">
+            {formatDuration(grandTotal)}
+          </p>
+        </div>
+      </div>
 
-        <button
-          type="submit"
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-        >
-          Построить
-        </button>
-      </form>
-
-      {rows.length === 0 ? (
+      {selected.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-zinc-300 p-10 text-center text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+          Отметь хотя бы один статус
+        </p>
+      ) : rows.length === 0 ? (
         <p className="rounded-lg border border-dashed border-zinc-300 p-10 text-center text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
           Нет задач под выбранные условия
         </p>
