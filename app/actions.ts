@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { del } from "@vercel/blob";
+import type { TaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { STATUSES, STATUS_META, TRANSITIONS } from "@/lib/status";
 
 export type CreateTaskInput = {
   title: string;
@@ -34,24 +36,53 @@ export async function createTask(input: CreateTaskInput) {
   redirect("/");
 }
 
-export async function completeTask(id: string) {
-  await prisma.task.update({
-    where: { id },
-    data: { status: "DONE", completedAt: new Date() },
-  });
-  revalidatePath("/");
-  revalidatePath("/done");
+export async function moveTask(id: string, to: TaskStatus) {
+  const task = await prisma.task.findUnique({ where: { id } });
+  if (!task) throw new Error("Задача не найдена");
+
+  const allowed = TRANSITIONS[task.status].some((t) => t.to === to);
+  if (!allowed) {
+    throw new Error(
+      `Переход «${task.status} → ${to}» запрещён: в «Готово» можно только после проверки`,
+    );
+  }
+
+  // Разработчик обработал замечания (в работу → на проверку) или задача
+  // принята — снимаем с комментариев пометку «новый»
+  const clearNewComments =
+    (task.status === "IN_PROGRESS" && to === "REVIEW") ||
+    (task.status === "REVIEW" && to === "DONE");
+
+  await prisma.$transaction([
+    prisma.task.update({
+      where: { id },
+      data: {
+        status: to,
+        completedAt: to === "DONE" ? new Date() : null,
+      },
+    }),
+    ...(clearNewComments
+      ? [
+          prisma.comment.updateMany({
+            where: { taskId: id, isNew: true },
+            data: { isNew: false },
+          }),
+        ]
+      : []),
+  ]);
+
+  for (const s of STATUSES) revalidatePath(STATUS_META[s].path);
   revalidatePath(`/tasks/${id}`);
 }
 
-export async function reopenTask(id: string) {
-  await prisma.task.update({
-    where: { id },
-    data: { status: "OPEN", completedAt: null },
-  });
-  revalidatePath("/");
-  revalidatePath("/done");
-  revalidatePath(`/tasks/${id}`);
+export async function addComment(taskId: string, formData: FormData) {
+  const body = String(formData.get("body") ?? "").trim();
+  if (!body) return;
+
+  await prisma.comment.create({ data: { taskId, body } });
+
+  for (const s of STATUSES) revalidatePath(STATUS_META[s].path);
+  revalidatePath(`/tasks/${taskId}`);
 }
 
 export async function deleteTask(id: string) {
@@ -60,10 +91,14 @@ export async function deleteTask(id: string) {
     include: { screenshots: true },
   });
 
-  // Чистим файлы в Blob; ошибки удаления файлов не должны ронять действие
-  await Promise.allSettled(task.screenshots.map((s) => del(s.url)));
+  // Чистим файлы в Blob (локальные дев-файлы /uploads пропускаем);
+  // ошибки удаления файлов не должны ронять действие
+  await Promise.allSettled(
+    task.screenshots
+      .filter((s) => s.url.startsWith("https://"))
+      .map((s) => del(s.url)),
+  );
 
-  revalidatePath("/");
-  revalidatePath("/done");
-  redirect(task.status === "DONE" ? "/done" : "/");
+  for (const s of STATUSES) revalidatePath(STATUS_META[s].path);
+  redirect(STATUS_META[task.status].path);
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { NavTabs } from "@/components/NavTabs";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,20 +18,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
         <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-            <nav className="flex items-center gap-1 text-sm font-medium">
-              <Link
-                href="/"
-                className="rounded-md px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              >
-                🐛 Активные
-              </Link>
-              <Link
-                href="/done"
-                className="rounded-md px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              >
-                ✅ Завершённые
-              </Link>
-            </nav>
+            <NavTabs />
             <Link
               href="/new"
               className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"

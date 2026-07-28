@@ -8,7 +8,9 @@ datasource db {
 }
 
 enum TaskStatus {
-  OPEN
+  NEW
+  IN_PROGRESS
+  REVIEW
   DONE
 }
 
@@ -17,10 +19,20 @@ model Task {
   title       String
   description String
   steps       String?
-  status      TaskStatus   @default(OPEN)
+  status      TaskStatus   @default(NEW)
   createdAt   DateTime     @default(now())
   completedAt DateTime?
   screenshots Screenshot[]
+  comments    Comment[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  body      String
+  isNew     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
 model Screenshot {

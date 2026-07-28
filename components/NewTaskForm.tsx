@@ -4,6 +4,24 @@ import { useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
 import { createTask } from "@/app/actions";
 
+async function uploadScreenshot(file: File): Promise<string> {
+  try {
+    const blob = await upload(`screenshots/${file.name}`, file, {
+      access: "public",
+      handleUploadUrl: "/api/upload",
+    });
+    return blob.url;
+  } catch (err) {
+    // Локально Vercel Blob недоступен — пробуем дев-фолбэк (public/uploads)
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/local-upload", { method: "POST", body: form });
+    if (!res.ok) throw err;
+    const data = (await res.json()) as { url: string };
+    return data.url;
+  }
+}
+
 const inputCls =
   "w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-900";
 
@@ -38,11 +56,7 @@ export function NewTaskForm() {
     try {
       const screenshotUrls: string[] = [];
       for (const file of files) {
-        const blob = await upload(`screenshots/${file.name}`, file, {
-          access: "public",
-          handleUploadUrl: "/api/upload",
-        });
-        screenshotUrls.push(blob.url);
+        screenshotUrls.push(await uploadScreenshot(file));
       }
 
       await createTask({ title, description, steps, screenshotUrls });
