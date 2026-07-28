@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+enum TaskStatus {
+  OPEN
+  DONE
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String
+  steps       String?
+  status      TaskStatus   @default(OPEN)
+  createdAt   DateTime     @default(now())
+  completedAt DateTime?
+  screenshots Screenshot[]
+}
+
+model Screenshot {
+  id     String @id @default(cuid())
+  url    String
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
