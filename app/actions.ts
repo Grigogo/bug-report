@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import { del } from "@vercel/blob";
 import type { TaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { STATUSES, STATUS_META, TRANSITIONS } from "@/lib/status";
+import type { ReportData, ReportRow } from "@/lib/report";
+import { STATUSES, STATUS_BADGE_LABEL, STATUS_META, TRANSITIONS } from "@/lib/status";
+import { totalSeconds } from "@/lib/time";
 
 export type CreateTaskInput = {
   title: string;
@@ -88,6 +90,53 @@ export async function moveTask(id: string, to: TaskStatus) {
 
   for (const s of STATUSES) revalidatePath(STATUS_META[s].path);
   revalidatePath(`/tasks/${id}`);
+}
+
+export async function buildReport(formData: FormData) {
+  const taskIds = formData.getAll("task").map(String);
+  const name = String(formData.get("name") ?? "").trim();
+  if (taskIds.length === 0) {
+    throw new Error("Отметь хотя бы одну задачу для отчёта");
+  }
+
+  const tasks = await prisma.task.findMany({
+    where: { id: { in: taskIds } },
+    include: {
+      tags: true,
+      timeEntries: { select: { startedAt: true, stoppedAt: true } },
+    },
+  });
+
+  const now = new Date();
+  const rows: ReportRow[] = tasks
+    .map((t) => ({
+      id: t.id,
+      title: t.title,
+      description: t.description,
+      tags: t.tags.map((tag) => ({ name: tag.name, color: tag.color })),
+      statusLabel: STATUS_BADGE_LABEL[t.status],
+      createdAt: t.createdAt.toISOString(),
+      seconds: totalSeconds(t.timeEntries, now),
+    }))
+    .sort((a, b) => b.seconds - a.seconds);
+
+  const data: ReportData = {
+    rows,
+    totalSeconds: rows.reduce((sum, r) => sum + r.seconds, 0),
+  };
+
+  const report = await prisma.report.create({
+    data: { title: name || null, data },
+  });
+
+  revalidatePath("/reports");
+  redirect(`/reports/${report.id}`);
+}
+
+export async function deleteReport(id: string) {
+  await prisma.report.delete({ where: { id } });
+  revalidatePath("/reports");
+  redirect("/reports");
 }
 
 export async function startTimer(taskId: string) {

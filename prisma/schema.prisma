@@ -28,6 +28,14 @@ model Task {
   timeEntries TimeEntry[]
 }
 
+model Report {
+  id        String   @id @default(cuid())
+  title     String?
+  createdAt DateTime @default(now())
+  // Снимок данных на момент построения: { rows: [...], totalSeconds }
+  data      Json
+}
+
 model TimeEntry {
   id        String    @id @default(cuid())
   startedAt DateTime  @default(now())
