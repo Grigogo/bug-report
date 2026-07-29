@@ -19,7 +19,10 @@ async function uploadScreenshot(file: File): Promise<string> {
     const form = new FormData();
     form.append("file", file);
     const res = await fetch("/api/local-upload", { method: "POST", body: form });
-    if (!res.ok) throw err;
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(data?.error ?? (err instanceof Error ? err.message : "Не удалось загрузить скриншот"));
+    }
     const data = (await res.json()) as { url: string };
     return data.url;
   }

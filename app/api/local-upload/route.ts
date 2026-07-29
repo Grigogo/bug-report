@@ -10,6 +10,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Настроен Vercel Blob — используйте /api/upload" }, { status: 403 });
   }
 
+  // На Vercel файловая система только для чтения — сохранить локально нельзя
+  if (process.env.VERCEL) {
+    return NextResponse.json(
+      { error: "Хранилище скриншотов не настроено: добавьте переменную BLOB_READ_WRITE_TOKEN и переразверните проект" },
+      { status: 403 },
+    );
+  }
+
   const form = await request.formData();
   const file = form.get("file");
   if (!(file instanceof File) || !file.type.startsWith("image/")) {
