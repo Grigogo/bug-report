@@ -21,16 +21,28 @@ async function uploadScreenshot(file: File): Promise<string> {
     });
     return blob.url;
   } catch (err) {
-    // Локально Vercel Blob недоступен — пробуем дев-фолбэк (public/uploads)
-    const form = new FormData();
-    form.append("file", file);
-    const res = await fetch("/api/local-upload", { method: "POST", body: form });
-    if (!res.ok) {
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
-      throw new Error(data?.error ?? (err instanceof Error ? err.message : "Не удалось загрузить скриншот"));
+    // Прямая загрузка идёт на vercel.com и у клиента может блокироваться
+    // (VPN) — пробуем через наш сервер, затем локальный дев-фолбэк
+    let lastError =
+      err instanceof Error ? err : new Error("Не удалось загрузить скриншот");
+    for (const endpoint of ["/api/server-upload", "/api/local-upload"]) {
+      const form = new FormData();
+      form.append("file", file);
+      try {
+        const res = await fetch(endpoint, { method: "POST", body: form });
+        if (res.ok) {
+          return ((await res.json()) as { url: string }).url;
+        }
+        // 403 — «этот фолбэк здесь не работает», идём к следующему
+        if (res.status !== 403) {
+          const data = (await res.json().catch(() => null)) as { error?: string } | null;
+          lastError = new Error(data?.error ?? lastError.message);
+        }
+      } catch {
+        /* сеть подвела — пробуем следующий вариант */
+      }
     }
-    const data = (await res.json()) as { url: string };
-    return data.url;
+    throw lastError;
   }
 }
 
