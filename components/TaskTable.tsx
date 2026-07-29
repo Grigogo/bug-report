@@ -69,6 +69,14 @@ export function TaskTable({
                   {task.tags.map((tag) => (
                     <TagChip key={tag.id} tag={tag} small />
                   ))}
+                  {task.editedAt && (
+                    <span
+                      title={`Отредактирована ${formatDate(task.editedAt)}`}
+                      className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-400"
+                    >
+                      ✏️ правлена
+                    </span>
+                  )}
                 </div>
                 <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500 dark:text-zinc-400">
                   {task.description}

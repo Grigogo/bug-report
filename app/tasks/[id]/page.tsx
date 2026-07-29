@@ -55,9 +55,16 @@ export default async function TaskPage({
           </span>
         </div>
 
-        <p className="mt-1 text-xs text-zinc-500">
-          Создана {formatDate(task.createdAt)}
-          {task.completedAt && ` · завершена ${formatDate(task.completedAt)}`}
+        <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-zinc-500">
+          <span>
+            Создана {formatDate(task.createdAt)}
+            {task.completedAt && ` · завершена ${formatDate(task.completedAt)}`}
+          </span>
+          {task.editedAt && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-400">
+              ✏️ Отредактирована {formatDate(task.editedAt)}
+            </span>
+          )}
         </p>
 
         {allTags.length > 0 && (
@@ -165,6 +172,14 @@ export default async function TaskPage({
               </button>
             </form>
           ))}
+          {task.status !== "DONE" && (
+            <Link
+              href={`/tasks/${task.id}/edit`}
+              className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            >
+              ✏️ Редактировать
+            </Link>
+          )}
           <DeleteButton taskId={task.id} />
         </div>
       </div>

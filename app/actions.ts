@@ -42,6 +42,37 @@ export async function createTask(input: CreateTaskInput) {
   redirect("/");
 }
 
+export async function updateTask(id: string, formData: FormData) {
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const steps = String(formData.get("steps") ?? "").trim();
+  const tagIds = formData.getAll("tags").map(String);
+  if (!title || !description) {
+    throw new Error("Название и описание обязательны");
+  }
+
+  const task = await prisma.task.findUnique({ where: { id } });
+  if (!task) throw new Error("Задача не найдена");
+  if (task.status === "DONE") {
+    throw new Error("Готовую задачу редактировать нельзя — сначала верни её в работу");
+  }
+
+  await prisma.task.update({
+    where: { id },
+    data: {
+      title,
+      description,
+      steps: steps || null,
+      editedAt: new Date(),
+      tags: { set: tagIds.map((tagId) => ({ id: tagId })) },
+    },
+  });
+
+  for (const s of STATUSES) revalidatePath(STATUS_META[s].path);
+  revalidatePath(`/tasks/${id}`);
+  redirect(`/tasks/${id}`);
+}
+
 export async function moveTask(id: string, to: TaskStatus) {
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) throw new Error("Задача не найдена");

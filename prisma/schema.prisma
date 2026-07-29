@@ -22,6 +22,8 @@ model Task {
   status      TaskStatus   @default(NEW)
   createdAt   DateTime     @default(now())
   completedAt DateTime?
+  // Момент последней правки полей задачи (статусные переходы не считаются)
+  editedAt    DateTime?
   screenshots Screenshot[]
   comments    Comment[]
   tags        Tag[]
