@@ -8,8 +8,12 @@ import { tagColor } from "@/lib/tags";
 export type TagOption = { id: string; name: string; color: string };
 
 async function uploadScreenshot(file: File): Promise<string> {
+  // Кириллица и пробелы в имени (macOS: «Снимок экрана … в ….png») ломают
+  // загрузку в Vercel Blob (400 на PUT), поэтому имя генерируем сами
+  const ext = (/\.([a-zA-Z0-9]+)$/.exec(file.name)?.[1] ?? "png").toLowerCase();
+  const pathname = `screenshots/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   try {
-    const blob = await upload(`screenshots/${file.name}`, file, {
+    const blob = await upload(pathname, file, {
       access: "public",
       handleUploadUrl: "/api/upload",
     });
