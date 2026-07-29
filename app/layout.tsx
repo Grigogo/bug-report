@@ -44,6 +44,19 @@ export default function RootLayout({
           </div>
         </header>
         <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+        <footer className="mx-auto max-w-5xl px-4 pb-4 text-right text-[11px] text-zinc-400 dark:text-zinc-600">
+          сборка{" "}
+          {process.env.VERCEL_GIT_COMMIT_SHA
+            ? `${process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 7)} · `
+            : ""}
+          {new Date(process.env.NEXT_PUBLIC_BUILD_AT ?? 0).toLocaleString("ru-RU", {
+            timeZone: "Europe/Kirov",
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </footer>
       </body>
     </html>
   );
