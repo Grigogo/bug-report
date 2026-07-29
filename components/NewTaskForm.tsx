@@ -14,7 +14,9 @@ async function uploadScreenshot(file: File): Promise<string> {
   const pathname = `screenshots/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   try {
     const blob = await upload(pathname, file, {
-      access: "public",
+      // Хранилище Blob создано приватным — public-загрузку Vercel отклоняет;
+      // показ идёт через наш прокси /api/screenshot
+      access: "private",
       handleUploadUrl: "/api/upload",
     });
     return blob.url;

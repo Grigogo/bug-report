@@ -7,6 +7,7 @@ import { DeleteButton } from "@/components/DeleteButton";
 import { TagChip } from "@/components/TagChip";
 import { TimerControls } from "@/components/TimerControls";
 import { TimerTicker } from "@/components/TimerTicker";
+import { screenshotSrc } from "@/lib/screenshot";
 import { runningSince, totalSeconds } from "@/lib/time";
 import { ScreenshotGallery } from "@/components/ScreenshotGallery";
 import { formatDate } from "@/lib/format";
@@ -139,7 +140,10 @@ export default async function TaskPage({
               Скриншоты ({task.screenshots.length})
             </h2>
             <ScreenshotGallery
-              screenshots={task.screenshots.map((s) => ({ id: s.id, url: s.url }))}
+              screenshots={task.screenshots.map((s) => ({
+                id: s.id,
+                url: screenshotSrc(s.url),
+              }))}
             />
           </section>
         )}
