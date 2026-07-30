@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { moveTask, setTaskTags } from "@/app/actions";
+import { setTaskTags } from "@/app/actions";
 import { Comments } from "@/components/Comments";
 import { DeleteButton } from "@/components/DeleteButton";
+import { MoveButtons } from "@/components/MoveButtons";
 import { TagChip } from "@/components/TagChip";
 import { TimerControls } from "@/components/TimerControls";
 import { TimerTicker } from "@/components/TimerTicker";
@@ -11,7 +12,7 @@ import { screenshotSrc } from "@/lib/screenshot";
 import { runningSince, totalSeconds } from "@/lib/time";
 import { ScreenshotGallery } from "@/components/ScreenshotGallery";
 import { formatDate } from "@/lib/format";
-import { STATUS_BADGE_LABEL, STATUS_META, TRANSITIONS } from "@/lib/status";
+import { STATUS_BADGE_LABEL, STATUS_META } from "@/lib/status";
 
 export const dynamic = "force-dynamic";
 
@@ -158,20 +159,7 @@ export default async function TaskPage({
         <Comments taskId={task.id} comments={task.comments} />
 
         <div className="mt-6 flex items-center gap-3 border-t border-zinc-100 pt-5 dark:border-zinc-800">
-          {TRANSITIONS[task.status].map((t) => (
-            <form key={t.to} action={moveTask.bind(null, task.id, t.to)}>
-              <button
-                type="submit"
-                className={
-                  t.primary
-                    ? "rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-                    : "rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-                }
-              >
-                {t.label}
-              </button>
-            </form>
-          ))}
+          <MoveButtons taskId={task.id} status={task.status} variant="detail" />
           {task.status !== "DONE" && (
             <Link
               href={`/tasks/${task.id}/edit`}
