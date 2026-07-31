@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { logout } from "@/app/login/actions";
 import { NavTabs } from "@/components/NavTabs";
 import { Warmup } from "@/components/Warmup";
+import { SESSION_COOKIE, authEnabled, verifySession } from "@/lib/auth";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -9,11 +12,15 @@ export const metadata: Metadata = {
   description: "Баг-репорты от тестировщика",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const user = authEnabled()
+    ? await verifySession((await cookies()).get(SESSION_COOKIE)?.value)
+    : null;
+
   return (
     <html lang="ru">
       <body className="min-h-screen bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
@@ -42,6 +49,17 @@ export default function RootLayout({
               >
                 + Новый баг
               </Link>
+              {user && (
+                <form action={logout}>
+                  <button
+                    type="submit"
+                    title={`Выйти (${user})`}
+                    className="rounded-md px-2 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                  >
+                    ⎋
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         </header>
