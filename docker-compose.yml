@@ -36,7 +36,8 @@ services:
     volumes:
       - uploads:/app/public/uploads
     ports:
-      - "3000:3000"
+      # Только localhost: снаружи на ВМ пускает caddy по 443
+      - "127.0.0.1:3000:3000"
 
   # Обратный прокси с автоматическим TLS — только на ВМ (профиль prod)
   caddy:
