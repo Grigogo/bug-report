@@ -1,0 +1,60 @@
+# Баг-трекер в Docker: приложение + Postgres + том для скриншотов.
+# Локальный запуск:  docker compose up -d --build       (http://localhost:3000)
+# На ВМ с доменом:   docker compose --profile prod up -d --build
+# Переменные берутся из .env рядом с этим файлом:
+#   POSTGRES_PASSWORD  — пароль БД (обязателен)
+#   AUTH_USERS         — "логин:пароль,..." (пусто = сайт без входа)
+#   SITE_DOMAIN        — домен для caddy (профиль prod)
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bugreport
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD в .env}
+      POSTGRES_DB: bugreport
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+      # Схема накатывается один раз при первом старте пустого тома
+      - ./deploy/db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bugreport -d bugreport"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://bugreport:${POSTGRES_PASSWORD}@db:5432/bugreport
+      AUTH_USERS: ${AUTH_USERS:-}
+    volumes:
+      - uploads:/app/public/uploads
+    ports:
+      - "3000:3000"
+
+  # Обратный прокси с автоматическим TLS — только на ВМ (профиль prod)
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["prod"]
+    restart: unless-stopped
+    depends_on:
+      - app
+    command: caddy reverse-proxy --from ${SITE_DOMAIN:-bug-repor.grigogo.ru} --to app:3000
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  dbdata:
+  uploads:
+  caddy_data:
+  caddy_config:
